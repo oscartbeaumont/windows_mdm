@@ -10,3 +10,9 @@
 
 # Output of the go coverage tool, specifically when used with LiteIDE
 *.out
+
+# Mac System Files
+.DS_Store
+
+# Ignore The Folder With My HTTPS Certifciates
+certs/
