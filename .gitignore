@@ -16,3 +16,6 @@
 
 # Ignore The Folder With My HTTPS Certifciates
 certs/
+
+# Ignore The Private Keys For My CA Signing Certificate
+depot/*.key
