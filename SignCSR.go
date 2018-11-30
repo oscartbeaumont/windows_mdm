@@ -3,6 +3,7 @@ package main
 import (
 	"crypto/rand"
 	"crypto/x509"
+	"crypto/x509/pkix"
 	"encoding/pem"
 	"io/ioutil"
 	"log"
@@ -71,7 +72,7 @@ func SignCert(raw []byte) ([]byte, []byte, string) {
 
 		SerialNumber: big.NewInt(2),
 		Issuer:       ca.Subject,
-		Subject:      req.Subject,
+		Subject:      pkix.Name{CommonName: "e4c6b893-07a7-4b24-878e-9d8602c3d289"}, //req.Subject,
 		NotBefore:    time.Now(),
 		NotAfter:     time.Now().Add(54 * 7 * 24 * time.Hour), // 1 Year
 		KeyUsage:     x509.KeyUsageDigitalSignature,

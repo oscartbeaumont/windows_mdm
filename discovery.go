@@ -1,32 +1,23 @@
 package main
 
 import (
-	"io/ioutil"
+	"log"
 	"net/http"
-	"regexp"
-	"strconv"
-	"strings"
 )
 
-func IndexHandler(w http.ResponseWriter, r *http.Request) {
-	w.Write([]byte("Windows MDM Server Demo In Go Lang!"))
-}
-
-func GetDiscoveryHandler(w http.ResponseWriter, r *http.Request) {
+// Return a 200 status to show the device a MDM server exists
+func discoveryGETHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(""))
 }
 
-func PostDiscoveryHandler(w http.ResponseWriter, r *http.Request) {
-	// Read The Body
-	bodyRaw, _ := ioutil.ReadAll(r.Body)
-	body := string(bodyRaw)
+// Return the locations of the MDM server
+func discoveryPOSTHandler(w http.ResponseWriter, r *http.Request) { // TODO: Handle The Device Trying To Join - Valid Windows Version, Authentication, etc
+	body, MessageID := parseBody(r)
 
-	// Get The MessageID From The Body For The Response
-	res := regexp.MustCompile(`<a:MessageID>[\s\S]*?<\/a:MessageID>`).FindStringSubmatch(body)
-	MessageID := strings.Replace(strings.Replace(res[0], "<a:MessageID>", "", -1), "</a:MessageID>", "", -1)
+	log.Println(body)
 
-	// Respond
-	response := []byte(`<s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope"
+	// Send The Response
+	w.Write([]byte(`<s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope"
        xmlns:a="http://www.w3.org/2005/08/addressing">
       <s:Header>
         <a:Action s:mustUnderstand="1">
@@ -43,19 +34,15 @@ func PostDiscoveryHandler(w http.ResponseWriter, r *http.Request) {
            xmlns="http://schemas.microsoft.com/windows/management/2012/01/enrollment">
           <DiscoverResult>
             <AuthPolicy>OnPremise</AuthPolicy>
-            <EnrollmentVersion>3.0</EnrollmentVersion>
+            <EnrollmentVersion>4.0</EnrollmentVersion>
             <EnrollmentPolicyServiceUrl>
-              https://mdm.otbeaumont.me/EnrollmentPolicyService.svc
+              https://mdm.otbeaumont.me/EnrollmentServer/PolicyService.svc
             </EnrollmentPolicyServiceUrl>
             <EnrollmentServiceUrl>
-              https://mdm.otbeaumont.me/EnrollmentService.svc
+              https://mdm.otbeaumont.me/EnrollmentServer/EnrollmentService.svc
             </EnrollmentServiceUrl>
           </DiscoverResult>
         </DiscoverResponse>
       </s:Body>
-    </s:Envelope>`)
-
-	w.Header().Set("Content-Length", strconv.Itoa(len(response)))
-	w.Header().Set("Transfer-Encoding", "identity")
-	w.Write(response)
+    </s:Envelope>`))
 }

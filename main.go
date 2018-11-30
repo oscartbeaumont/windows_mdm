@@ -1,31 +1,64 @@
 package main
 
 import (
+	"io/ioutil"
 	"log"
 	"net/http"
-	"os"
+	"regexp"
+	"strings"
 
-	"github.com/gorilla/handlers"
-	"github.com/gorilla/mux"
+	"github.com/matryer/way"
+	_ "github.com/motemen/go-loghttp/global"
 )
 
+// The Function Run When The Server Starts
 func main() {
-	// Create The Router
-	router := mux.NewRouter()
-	r := router.Host("mdm.otbeaumont.me").Subrouter()
+	log.Println("Started Windows MDM Demo On Port 8000")
+	router := way.NewRouter()
 
-	//TODO: Minification Applied To The Returned Bodies -> Make Parser Generate It That Way To Save Preformance
+	// The HTTP Routes
+	router.HandleFunc("GET", "/", indexHandler)                                                       // main.go
+	router.HandleFunc("GET", "/EnrollmentServer/Discovery.svc", discoveryGETHandler)                  // discovery.go
+	router.HandleFunc("POST", "/EnrollmentServer/Discovery.svc", discoveryPOSTHandler)                // discovery.go
+	router.HandleFunc("POST", "/EnrollmentServer/PolicyService.svc", enrollmentPolicyHandler)         // enrollment.go
+	router.HandleFunc("POST", "/EnrollmentServer/EnrollmentService.svc", enrollmentWebServiceHandler) // enrollment.go
+	//router.HandleFunc("POST", "/EnrollmentServer/DeviceEnrollment.svc", ) // enrollment.go
 
-	// "discovery.go" Endpoints
-	r.PathPrefix("/").Methods("GET").HandlerFunc(IndexHandler)
-	r.PathPrefix("/EnrollmentServer/Discovery.svc").Methods("GET").HandlerFunc(GetDiscoveryHandler)
-	r.PathPrefix("/EnrollmentServer/Discovery.svc").Methods("POST").HandlerFunc(PostDiscoveryHandler)
+	router.NotFound = http.HandlerFunc(notFoundHandler) // main.go
 
-	// "EnrollmentService.go" Endpoints
-	r.PathPrefix("/EnrollmentPolicyService.svc").Methods("POST").HandlerFunc(EnrollmentPolicyServiceHandler)
-	r.PathPrefix("/EnrollmentService.svc").Methods("POST").HandlerFunc(EnrollmentServiceHandler)
+	// Start The HTTP Server Listening
+	log.Fatalln(http.ListenAndServe(":8000", logRequest(router)))
+}
 
-	// Start The Server Listening
-	log.Println("Started Listening On `https://mdm.otbeaumont.me`")
-	log.Fatal(http.ListenAndServeTLS(":443", "certs/bundle.crt", "certs/server.key", handlers.LoggingHandler(os.Stdout, router)))
+// The Response To Access The Index Page (Just A Placeholder)
+func indexHandler(w http.ResponseWriter, r *http.Request) {
+	w.Write([]byte("Demo Windows MDM Server!"))
+}
+
+// The Response To Known Web Routes
+func notFoundHandler(w http.ResponseWriter, r *http.Request) {
+	body, _ := ioutil.ReadAll(r.Body) // Get The Body From The Request
+	log.Println(string(body))         // Print The Body To The Console
+
+	w.WriteHeader(http.StatusNotFound)
+	w.Write([]byte("Not Found: 404"))
+}
+
+// The HTTP Request Logger
+func logRequest(handler http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		log.Printf("%s %s %s\n", r.RemoteAddr, r.Method, r.URL)
+		handler.ServeHTTP(w, r)
+	})
+}
+
+// An Easy Way To Get The Message ID From The Body
+func parseBody(r *http.Request) (string, string) {
+	// Read The Body
+	bodyRaw, _ := ioutil.ReadAll(r.Body)
+	body := string(bodyRaw)
+
+	// Get The MessageID From The Body For The Response
+	res := regexp.MustCompile(`<a:MessageID>[\s\S]*?<\/a:MessageID>`).FindStringSubmatch(body)
+	return body, strings.Replace(strings.Replace(res[0], "<a:MessageID>", "", -1), "</a:MessageID>", "", -1)
 }
