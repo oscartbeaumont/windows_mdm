@@ -5,5 +5,8 @@ I was trying to develop an MDM server to manage Windows 10 computers using the b
 # Licence
 This code is MIT licensed so use it in your projects as long as you give credit to me.
 
+# Why did I build this?
+This code is going to be cleaned up (a lot) and integrated into [Mattrax](https://github.com/mattrax/Mattrax)!
+
 # Help?
 If you are having any problems [contact me](https://otbeaumont.me/contact)!
