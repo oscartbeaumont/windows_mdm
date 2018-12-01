@@ -130,7 +130,7 @@ func enrollmentWebServiceHandler(w http.ResponseWriter, r *http.Request) {
 	rootCert := base64.StdEncoding.EncodeToString([]byte(string(rootCertRaw)))
 	h := sha1.New()
 	h.Write(rootCertRaw)
-	rootCertFigureprint := strings.ToUpper(fmt.Sprintf("%x\n", h.Sum(nil)))
+	rootCertFigureprint := strings.ToUpper(fmt.Sprintf("%x", h.Sum(nil)))
 
 	log.Println("")
 	log.Println("1)")
@@ -143,7 +143,7 @@ func enrollmentWebServiceHandler(w http.ResponseWriter, r *http.Request) {
 	clientCert := base64.StdEncoding.EncodeToString([]byte(string(clientCertRaw)))
 	h2 := sha1.New()
 	h2.Write(clientCertRaw)
-	clientCertFingureprint := strings.ToUpper(fmt.Sprintf("%x\n", h2.Sum(nil)))
+	clientCertFingureprint := strings.ToUpper(fmt.Sprintf("%x", h2.Sum(nil)))
 
 	internalPayload := `<wap-provisioningdoc version="1.1">
    <!-- This contains information about issued and trusted certificates. -->
