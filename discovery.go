@@ -1,8 +1,9 @@
 package main
 
 import (
-	"log"
 	"net/http"
+
+	"github.com/antchfx/xquery/xml"
 )
 
 // Return a 200 status to show the device a MDM server exists
@@ -12,9 +13,11 @@ func discoveryGETHandler(w http.ResponseWriter, r *http.Request) {
 
 // Return the locations of the MDM server
 func discoveryPOSTHandler(w http.ResponseWriter, r *http.Request) { // TODO: Handle The Device Trying To Join - Valid Windows Version, Authentication, etc
-	body, MessageID := parseBody(r)
-
-	log.Println(body)
+	soapBody, err := xmlquery.Parse(r.Body)
+	if err != nil {
+		panic(err)
+	}
+	MessageID := xmlquery.FindOne(soapBody, "//s:Header/a:MessageID").InnerText()
 
 	// Send The Response
 	w.Write([]byte(`<s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope"

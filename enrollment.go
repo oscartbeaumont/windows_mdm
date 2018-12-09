@@ -7,9 +7,10 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
-	"regexp"
 	"strconv"
 	"strings"
+
+	"github.com/antchfx/xquery/xml"
 )
 
 // The Pem To Der Command: openssl x509 -outform der -in depot/ca.pem -out depot/ca.der
@@ -17,9 +18,11 @@ import (
 
 //
 func enrollmentPolicyHandler(w http.ResponseWriter, r *http.Request) { // TODO: Authentication, etc
-	body, MessageID := parseBody(r)
-
-	log.Println(body)
+	soapBody, err := xmlquery.Parse(r.Body)
+	if err != nil {
+		panic(err)
+	}
+	MessageID := xmlquery.FindOne(soapBody, "//s:Header/a:MessageID").InnerText()
 
 	// Send The Response
 	response := []byte(`<s:Envelope
@@ -105,18 +108,13 @@ func enrollmentPolicyHandler(w http.ResponseWriter, r *http.Request) { // TODO: 
 
 //
 func enrollmentWebServiceHandler(w http.ResponseWriter, r *http.Request) {
-	body, MessageID := parseBody(r)
-
-	log.Println(body)
-	log.Println("")
-
-	// Get The Binary Security Token
-	res := regexp.MustCompile(`<wsse:BinarySecurityToken ValueType="http://schemas.microsoft.com/windows/pki/2009/01/enrollment#PKCS10" EncodingType="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd#base64binary">[\s\S]*?<\/wsse:BinarySecurityToken>`).FindStringSubmatch(body)
-	binarySecurityToken := strings.Replace(strings.Replace(res[0], `<wsse:BinarySecurityToken ValueType="http://schemas.microsoft.com/windows/pki/2009/01/enrollment#PKCS10" EncodingType="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd#base64binary">`, "", -1), `</wsse:BinarySecurityToken>`, "", -1)
-	log.Println("Hey There")
+	soapBody, err := xmlquery.Parse(r.Body)
+	if err != nil {
+		panic(err)
+	}
+	MessageID := xmlquery.FindOne(soapBody, "//s:Header/a:MessageID").InnerText()
+	binarySecurityToken := xmlquery.FindOne(soapBody, "//s:Body/wst:RequestSecurityToken/wsse:BinarySecurityToken").InnerText()
 	log.Println(binarySecurityToken)
-	log.Println("")
-	log.Println("")
 
 	// Sign The Clients Certificate Request
 	clientCertRaw, CaCertRaw, CaSubject := SignCert([]byte(binarySecurityToken))

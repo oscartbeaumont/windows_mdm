@@ -4,8 +4,6 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
-	"regexp"
-	"strings"
 
 	"github.com/matryer/way"
 	_ "github.com/motemen/go-loghttp/global"
@@ -50,15 +48,4 @@ func logRequest(handler http.Handler) http.Handler {
 		log.Printf("%s %s %s\n", r.RemoteAddr, r.Method, r.URL)
 		handler.ServeHTTP(w, r)
 	})
-}
-
-// An Easy Way To Get The Message ID From The Body
-func parseBody(r *http.Request) (string, string) {
-	// Read The Body
-	bodyRaw, _ := ioutil.ReadAll(r.Body)
-	body := string(bodyRaw)
-
-	// Get The MessageID From The Body For The Response
-	res := regexp.MustCompile(`<a:MessageID>[\s\S]*?<\/a:MessageID>`).FindStringSubmatch(body)
-	return body, strings.Replace(strings.Replace(res[0], "<a:MessageID>", "", -1), "</a:MessageID>", "", -1)
 }
