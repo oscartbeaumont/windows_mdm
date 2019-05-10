@@ -2,6 +2,9 @@
 ## Status: Working Enrollment
 I was trying to develop an MDM server to manage Windows 10 computers using the built-in protocol Windows Mobile Device Management protocol. I found the documentation really difficult to understand and I could not find any open source demo's on the internet. So I figured out the protocol and am publishing this for anyone who is trying to do the same thing. This codebase is not designed to be production ready, clean and error free code, It is meant to show you the minimum requirements to get a Windows 10 device enrolled under management.
 
+## Disclaimer
+This project should not be assumed to be secure or even correctly follow the Microsoft spec. I released this as a starting point for other developers who are working with the protocol which I found extremely difficult to work out. Please don't expose this to the internet or leave devices enrolled with the default certificates as it could put your equipment at risk.
+
 # Licence
 This code is MIT licensed so use it in your projects as long as you give credit to me.
 
