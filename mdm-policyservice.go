@@ -12,12 +12,6 @@ import (
 // TODO
 func PolicyServiceHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		// If the method is GET tell the client the server exists with a 200 response. Else the request is a POST return the server configuration.
-		if r.Method == http.MethodGet {
-			w.WriteHeader(http.StatusOK)
-			return
-		}
-
 		// Decode The HTTP Request Body From The Client To The cmd varible using the struct defined above.
 		var cmd windowstype.MdePolicyServiceRequest
 		if err := cmd.Decode(r.Body); err != nil {
