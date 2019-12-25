@@ -1,6 +1,8 @@
+### Development has finished on this repo and has moved to [Mattrax](https://github.com/mattrax/Mattrax). The code was/is being refactored to follow the spec's better and be more secure, resilient and stable as it is integrated into Mattrax, please reference Mattrax's code over this repo although this repo is a good starting point.
+
 # Windows MDM Demo In Go Lang
 
-## Status: Working Enrollment - Still being refactored
+# Status: Working Enrollment
 
 I was trying to develop an MDM server to manage Windows 10 computers using the built-in protocol Windows Mobile Device Management protocol. I found the documentation really difficult to understand and I could not find any open source demo's on the internet. So I figured out the protocol and am publishing this for anyone who is trying to do the same thing. This codebase is not designed to be production ready, clean and error free code, It is meant to show you the minimum requirements to get a Windows 10 device enrolled under management.
 
