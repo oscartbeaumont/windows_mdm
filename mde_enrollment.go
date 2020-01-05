@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"crypto/sha1"
 	"crypto/x509"
+	"crypto/x509/pkix"
 	"encoding/base64"
 	"fmt"
 	"io/ioutil"
@@ -35,6 +36,10 @@ func EnrollHandler(w http.ResponseWriter, r *http.Request) {
 	// Retrieve the BinarySecurityToken (which contains a Certificate Signing Request) From The Body For The Response
 	// Note: The XML isn't parsed to keep this example simple but in your server it would have to have been
 	binarySecurityToken := strings.Replace(strings.Replace(regexp.MustCompile(`<wsse:BinarySecurityToken ValueType="http:\/\/schemas.microsoft.com\/windows\/pki\/2009\/01\/enrollment#PKCS10" EncodingType="http:\/\/docs\.oasis-open\.org\/wss\/2004\/01\/oasis-200401-wss-wssecurity-secext-1\.0\.xsd#base64binary">[\s\S]*?<\/wsse:BinarySecurityToken>`).FindStringSubmatch(body)[0], `<wsse:BinarySecurityToken ValueType="http://schemas.microsoft.com/windows/pki/2009/01/enrollment#PKCS10" EncodingType="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd#base64binary">`, "", -1), "</wsse:BinarySecurityToken>", "", -1)
+
+	// Retrieve the DeviceID From The Body For The Response
+	// Note: The XML isn't parsed to keep this example simple but in your server it would have to have been
+	deviceID := strings.Replace(strings.Replace(regexp.MustCompile(`<ac:ContextItem Name="DeviceID"><ac:Value>[\s\S]*?<\/ac:Value><\/ac:ContextItem>`).FindStringSubmatch(body)[0], `<ac:ContextItem Name="DeviceID"><ac:Value>`, "", -1), "</ac:Value></ac:ContextItem>", "", -1)
 
 	/* Sign binary security token */
 	// Load raw Root CA
@@ -82,11 +87,13 @@ func EnrollHandler(w http.ResponseWriter, r *http.Request) {
 		PublicKey:          csr.PublicKey,
 		SerialNumber:       big.NewInt(2),
 		Issuer:             rootCert.Issuer,
-		Subject:            csr.Subject,
-		NotBefore:          NotBefore1,
-		NotAfter:           NotBefore1.Add(365 * 24 * time.Hour),
-		KeyUsage:           x509.KeyUsageDigitalSignature,
-		ExtKeyUsage:        []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth},
+		Subject: pkix.Name{
+			CommonName: deviceID,
+		}, // The Subject is not used from the CSR because the characters in it are causing issues.
+		NotBefore:   NotBefore1,
+		NotAfter:    NotBefore1.Add(365 * 24 * time.Hour),
+		KeyUsage:    x509.KeyUsageDigitalSignature,
+		ExtKeyUsage: []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth},
 	}
 
 	// Sign certificate with the identity
@@ -108,8 +115,81 @@ func EnrollHandler(w http.ResponseWriter, r *http.Request) {
 	/* End Sign binary security token */
 
 	// Generate WAP provisioning profile for inside the payload
-	wapProvisionProfile := []byte(`<wap-provisioningdoc version="1.1"><characteristic type="CertificateStore"><characteristic type="Root"><characteristic type="System"><characteristic type="` + identityCertFingerprint /* Root CA Certificate Fingureprint (SHA-1 hash of Der) */ + `"><parm name="EncodedCertificate" value="` + base64.StdEncoding.EncodeToString(rootCertificateDer) /* Base64 encoded root CA certificate */ + `"></parm></characteristic></characteristic></characteristic><characteristic type="My"><characteristic type="User"><characteristic type="` + signedClientCertFingerprint /* Signed Client Certificate (From the BinarySecurityToken) Fingureprint (SHA-1 hash of Der) */ + `"><parm name="EncodedCertificate" value="` + base64.StdEncoding.EncodeToString(clientCRTRaw) /* Base64 encoded signed certificate */ + `"></parm></characteristic><characteristic type="PrivateKeyContainer"><parm name="KeySpec" value="2"></parm><parm name="ContainerName" value="ConfigMgrEnrollment"></parm><parm name="ProviderType" value="1"></parm></characteristic></characteristic></characteristic></characteristic><characteristic type="APPLICATION"><parm name="APPID" value="w7"></parm><parm name="PROVIDER-ID" value="DEMO MDM"></parm><parm name="NAME" value="Windows MDM Demo Server"></parm><parm name="SSPHyperlink" value="http://go.microsoft.com/fwlink/?LinkId=255310"></parm><parm name="ADDR" value="https://` + domain + `/ManagementServer/MDM.svc"></parm><parm name="ServerList" value="https://` + domain + `/ManagementServer/ServerList.svc"></parm><parm name="ROLE" value="4294967295"></parm><parm name="CRLCheck" value="0"></parm><parm name="CONNRETRYFREQ" value="6"></parm><parm name="INITIALBACKOFFTIME" value="30000"></parm><parm name="MAXBACKOFFTIME" value="120000"></parm><parm name="BACKCOMPATRETRYDISABLED"></parm><parm name="DEFAULTENCODING" value="application/vnd.syncml.dm+xml"></parm> ` /* I think this encoding is less secure but I don't understand how to decode the other one */ + `<characteristic type="APPAUTH"><parm name="AAUTHLEVEL" value="CLIENT"></parm><parm name="AAUTHTYPE" value="DIGEST"></parm><parm name="AAUTHSECRET" value="dummy"></parm><parm name="AAUTHDATA" value="nonce"></parm></characteristic><characteristic type="APPAUTH"><parm name="AAUTHLEVEL" value="APPSRV"></parm><parm name="AAUTHTYPE" value="DIGEST"></parm><parm name="AAUTHNAME" value="dummy"></parm><parm name="AAUTHSECRET" value="dummy"></parm><parm name="AAUTHDATA" value="nonce"></parm></characteristic></characteristic><characteristic type="Registry"><characteristic type="HKLM\Security\MachineEnrollment"><parm name="RenewalPeriod" value="363" datatype="integer"></parm></characteristic><characteristic type="HKLM\Security\MachineEnrollment\OmaDmRetry"><parm name="NumRetries" value="8" datatype="integer"></parm><parm name="RetryInterval" value="15" datatype="integer"></parm><parm name="AuxNumRetries" value="5" datatype="integer"></parm><parm name="AuxRetryInterval" value="3" datatype="integer"></parm><parm name="Aux2NumRetries" value="0" datatype="integer"></parm><parm name="Aux2RetryInterval" value="480" datatype="integer"></parm></characteristic></characteristic><characteristic type="Registry"><characteristic type="HKLM\Software\Windows\CurrentVersion\MDM\MachineEnrollment"><parm name="DeviceName" value="TODO" datatype="string"></parm></characteristic></characteristic><characteristic type="Registry"><characteristic type="HKLM\SOFTWARE\Windows\CurrentVersion\MDM\MachineEnrollment"><parm name="SslServerRootCertHash" value="` + identityCertFingerprint /* Root CA Certificate Fingureprint (SHA-1 hash of Der) */ + `" datatype="string"></parm><parm name="SslClientCertStore" value="MY%5CSystem" datatype="string"></parm><parm name="SslClientCertSubjectName" value="Subject=CN=%3d` + url.PathEscape(clientCertificate.Subject.CommonName) /* CommonName of the signed cetrificate. In this case the command named request in the CSR (BinarySecurityToken) */ + `" datatype="string"></parm><parm name="SslClientCertHash" value="` + signedClientCertFingerprint /* Signed Client Certificate (From the BinarySecurityToken) Fingureprint (SHA-1 hash of Der) */ + `" datatype="string"></parm></characteristic><characteristic type="HKLM\Security\Provisioning\OMADM\Accounts\037B1F0D3842015588E753CDE76EC724"><parm name="SslClientCertReference" value="My;System;` + signedClientCertFingerprint /* Signed Client Certificate (From the BinarySecurityToken) Fingureprint (SHA-1 hash of Der) */ + `" datatype="string"></parm></characteristic></characteristic></wap-provisioningdoc>`)
+	wapProvisionProfile := `<?xml version="1.0" encoding="UTF-8"?>
+	<wap-provisioningdoc version="1.1">
+		<characteristic type="CertificateStore">
+			<characteristic type="Root">
+				<characteristic type="System">
+					<characteristic type="` + identityCertFingerprint /* Root CA Certificate Fingureprint (SHA-1 hash of Der) */ + `">
+						<parm name="EncodedCertificate" value="` + base64.StdEncoding.EncodeToString(rootCertificateDer) /* Base64 encoded root CA certificate */ + `" />
+					</characteristic>
+				</characteristic>
+			</characteristic>
+			<characteristic type="My">
+				<characteristic type="User">
+					<characteristic type="` + signedClientCertFingerprint /* Signed Client Certificate (From the BinarySecurityToken) Fingureprint (SHA-1 hash of Der) */ + `">
+						<parm name="EncodedCertificate" value="` + base64.StdEncoding.EncodeToString(clientCRTRaw) /* Base64 encoded signed certificate */ + `" />
+					</characteristic>
+					<characteristic type="PrivateKeyContainer" />
+				</characteristic>
+				<characteristic type="WSTEP">
+					<characteristic type="Renew">
+						<parm name="ROBOSupport" value="true" datatype="boolean"/>
+						<parm name="RenewPeriod" value="60" datatype="integer"/>
+						<parm name="RetryInterval" value="4" datatype="integer"/>
+					</characteristic>
+				</characteristic>
+			</characteristic>
+		</characteristic>
+		<characteristic type="APPLICATION">
+			<parm name="APPID" value="w7" />
+			<parm name="PROVIDER-ID" value="DEMO MDM" />
+			<parm name="NAME" value="Windows MDM Demo Server" />
+			<parm name="SSPHyperlink" value="http://go.microsoft.com/fwlink/?LinkId=255310" />
+			<parm name="ADDR" value="https://` + domain + `/ManagementServer/MDM.svc" />
+			<parm name="ServerList" value="https://` + domain + `/ManagementServer/ServerList.svc" />
+			<parm name="ROLE" value="4294967295" />
+			<parm name="CRLCheck" value="0" />
+			<parm name="CONNRETRYFREQ" value="6" />
+			<parm name="INITIALBACKOFFTIME" value="30000" />
+			<parm name="MAXBACKOFFTIME" value="120000" />
+			<parm name="BACKCOMPATRETRYDISABLED" />
+			<parm name="DEFAULTENCODING" value="application/vnd.syncml.dm+xml" />
+			<!-- <parm name="SSLCLIENTCERTSEARCHCRITERIA" value="Subject=` + strings.ReplaceAll(url.PathEscape(clientCertificate.Subject.String()), "=", "%3D") + `&amp;Stores=My%5CUser" /> -->
+			<characteristic type="APPAUTH">
+				<parm name="AAUTHLEVEL" value="CLIENT" />
+				<parm name="AAUTHTYPE" value="DIGEST" />
+				<parm name="AAUTHSECRET" value="dummy" />
+				<parm name="AAUTHDATA" value="nonce" />
+			</characteristic>
+			<characteristic type="APPAUTH">
+				<parm name="AAUTHLEVEL" value="APPSRV" />
+				<parm name="AAUTHTYPE" value="DIGEST" />
+				<parm name="AAUTHNAME" value="dummy" />
+				<parm name="AAUTHSECRET" value="dummy" />
+				<parm name="AAUTHDATA" value="nonce" />
+			</characteristic>
+		</characteristic>
+		<characteristic type="DMClient">
+			<characteristic type="Provider">
+				<characteristic type="DEMO MDM">
+					<characteristic type="Poll">
+						<parm name="NumberOfFirstRetries" value="8" datatype="integer" />
+						<parm name="IntervalForFirstSetOfRetries" value="15" datatype="integer" />
+						<parm name="NumberOfSecondRetries" value="5" datatype="integer" />
+						<parm name="IntervalForSecondSetOfRetries" value="3" datatype="integer" />
+						<parm name="NumberOfRemainingScheduledRetries" value="0" datatype="integer" />
+						<parm name="IntervalForRemainingScheduledRetries" value="1" datatype="integer" />
+					</characteristic>
+					<parm name="EntDeviceName" value="Demo Persons Device" datatype="string" />
+				</characteristic>
+			</characteristic>
+		</characteristic>
+	</wap-provisioningdoc>`
 
+	fmt.Println(wapProvisionProfile)
+
+	wapProvisionProfileRaw := []byte(strings.ReplaceAll(strings.ReplaceAll(wapProvisionProfile, "\n", ""), "\t", ""))
 	// Create response payload
 	response := []byte(`<s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope"
 	    xmlns:a="http://www.w3.org/2005/08/addressing"
@@ -130,7 +210,7 @@ func EnrollHandler(w http.ResponseWriter, r *http.Request) {
 	                <TokenType>http://schemas.microsoft.com/5.0.0.0/ConfigurationManager/Enrollment/DeviceEnrollmentToken</TokenType>
 	                <DispositionMessage xmlns="http://schemas.microsoft.com/windows/pki/2009/01/enrollment"></DispositionMessage>
 	                <RequestedSecurityToken>
-	                    <BinarySecurityToken xmlns="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd" ValueType="http://schemas.microsoft.com/5.0.0.0/ConfigurationManager/Enrollment/DeviceEnrollmentProvisionDoc" EncodingType="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd#base64binary">` + base64.StdEncoding.EncodeToString(wapProvisionProfile) + `</BinarySecurityToken>
+	                    <BinarySecurityToken xmlns="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd" ValueType="http://schemas.microsoft.com/5.0.0.0/ConfigurationManager/Enrollment/DeviceEnrollmentProvisionDoc" EncodingType="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd#base64binary">` + base64.StdEncoding.EncodeToString(wapProvisionProfileRaw) + `</BinarySecurityToken>
 	                </RequestedSecurityToken>
 	                <RequestID xmlns="http://schemas.microsoft.com/windows/pki/2009/01/enrollment">0</RequestID>
 	            </RequestSecurityTokenResponse>
@@ -141,6 +221,5 @@ func EnrollHandler(w http.ResponseWriter, r *http.Request) {
 	// Return request body
 	w.Header().Set("Content-Type", "application/soap+xml; charset=utf-8")
 	w.Header().Set("Content-Length", strconv.Itoa(len(response)))
-	fmt.Println(string(response))
 	w.Write(response)
 }
