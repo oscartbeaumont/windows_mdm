@@ -24,6 +24,7 @@ func main() {
 	log.Println("Starting Windows MDM Demo. Created By Oscar Beaumont!")
 	log.Println("WARNING: DO NOT PUT THIS INTO PRODUCTION!")
 	log.Println("This implementation is probably not perfectly to spec but neither is the behaviour I observed from Intune so...")
+	log.Println("It is designed to ignore all protocol security measures and authentication for simplicity. Productions servers MUST ALWAYS use all security measures for a security critical protocol like this.")
 	fmt.Println()
 
 	// Parse CMD flags. This populates the varibles defined above

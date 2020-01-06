@@ -11,7 +11,6 @@ import (
 	"math/big"
 	mathrand "math/rand"
 	"net/http"
-	"net/url"
 	"regexp"
 	"strconv"
 	"strings"
@@ -40,6 +39,10 @@ func EnrollHandler(w http.ResponseWriter, r *http.Request) {
 	// Retrieve the DeviceID From The Body For The Response
 	// Note: The XML isn't parsed to keep this example simple but in your server it would have to have been
 	deviceID := strings.Replace(strings.Replace(regexp.MustCompile(`<ac:ContextItem Name="DeviceID"><ac:Value>[\s\S]*?<\/ac:Value><\/ac:ContextItem>`).FindStringSubmatch(body)[0], `<ac:ContextItem Name="DeviceID"><ac:Value>`, "", -1), "</ac:Value></ac:ContextItem>", "", -1)
+
+	// Retrieve the EnrollmentType From The Body For The Response
+	// Note: The XML isn't parsed to keep this example simple but in your server it would have to have been
+	enrollmentType := strings.Replace(strings.Replace(regexp.MustCompile(`<ac:ContextItem Name="EnrollmentType"><ac:Value>[\s\S]*?<\/ac:Value><\/ac:ContextItem>`).FindStringSubmatch(body)[0], `<ac:ContextItem Name="EnrollmentType"><ac:Value>`, "", -1), "</ac:Value></ac:ContextItem>", "", -1)
 
 	/* Sign binary security token */
 	// Load raw Root CA
@@ -102,6 +105,8 @@ func EnrollHandler(w http.ResponseWriter, r *http.Request) {
 		panic(err)
 	}
 
+	// Note: SHA-1 Hash OID is deprecated
+
 	// Fingureprint (SHA-1 hash) of client certificate
 	h := sha1.New()
 	h.Write(clientCRTRaw)
@@ -111,6 +116,12 @@ func EnrollHandler(w http.ResponseWriter, r *http.Request) {
 	h2 := sha1.New()
 	h2.Write(rootCertificateDer)
 	identityCertFingerprint := strings.ToUpper(fmt.Sprintf("%x", h2.Sum(nil))) // TODO: Cleanup -> This line is probally messer than it needs to be
+
+	// Determain Certstore
+	certStore := "User"
+	if enrollmentType == "Device" {
+		certStore = "System"
+	}
 
 	/* End Sign binary security token */
 
@@ -126,18 +137,11 @@ func EnrollHandler(w http.ResponseWriter, r *http.Request) {
 				</characteristic>
 			</characteristic>
 			<characteristic type="My">
-				<characteristic type="User">
+				<characteristic type="` + certStore + `">
 					<characteristic type="` + signedClientCertFingerprint /* Signed Client Certificate (From the BinarySecurityToken) Fingureprint (SHA-1 hash of Der) */ + `">
 						<parm name="EncodedCertificate" value="` + base64.StdEncoding.EncodeToString(clientCRTRaw) /* Base64 encoded signed certificate */ + `" />
 					</characteristic>
 					<characteristic type="PrivateKeyContainer" />
-				</characteristic>
-				<characteristic type="WSTEP">
-					<characteristic type="Renew">
-						<parm name="ROBOSupport" value="true" datatype="boolean"/>
-						<parm name="RenewPeriod" value="60" datatype="integer"/>
-						<parm name="RetryInterval" value="4" datatype="integer"/>
-					</characteristic>
 				</characteristic>
 			</characteristic>
 		</characteristic>
@@ -145,17 +149,11 @@ func EnrollHandler(w http.ResponseWriter, r *http.Request) {
 			<parm name="APPID" value="w7" />
 			<parm name="PROVIDER-ID" value="DEMO MDM" />
 			<parm name="NAME" value="Windows MDM Demo Server" />
-			<parm name="SSPHyperlink" value="http://go.microsoft.com/fwlink/?LinkId=255310" />
 			<parm name="ADDR" value="https://` + domain + `/ManagementServer/MDM.svc" />
 			<parm name="ServerList" value="https://` + domain + `/ManagementServer/ServerList.svc" />
 			<parm name="ROLE" value="4294967295" />
-			<parm name="CRLCheck" value="0" />
-			<parm name="CONNRETRYFREQ" value="6" />
-			<parm name="INITIALBACKOFFTIME" value="30000" />
-			<parm name="MAXBACKOFFTIME" value="120000" />
 			<parm name="BACKCOMPATRETRYDISABLED" />
 			<parm name="DEFAULTENCODING" value="application/vnd.syncml.dm+xml" />
-			<!-- <parm name="SSLCLIENTCERTSEARCHCRITERIA" value="Subject=` + strings.ReplaceAll(url.PathEscape(clientCertificate.Subject.String()), "=", "%3D") + `&amp;Stores=My%5CUser" /> -->
 			<characteristic type="APPAUTH">
 				<parm name="AAUTHLEVEL" value="CLIENT" />
 				<parm name="AAUTHTYPE" value="DIGEST" />
@@ -175,19 +173,11 @@ func EnrollHandler(w http.ResponseWriter, r *http.Request) {
 				<characteristic type="DEMO MDM">
 					<characteristic type="Poll">
 						<parm name="NumberOfFirstRetries" value="8" datatype="integer" />
-						<parm name="IntervalForFirstSetOfRetries" value="15" datatype="integer" />
-						<parm name="NumberOfSecondRetries" value="5" datatype="integer" />
-						<parm name="IntervalForSecondSetOfRetries" value="3" datatype="integer" />
-						<parm name="NumberOfRemainingScheduledRetries" value="0" datatype="integer" />
-						<parm name="IntervalForRemainingScheduledRetries" value="1" datatype="integer" />
 					</characteristic>
-					<parm name="EntDeviceName" value="Demo Persons Device" datatype="string" />
 				</characteristic>
 			</characteristic>
 		</characteristic>
 	</wap-provisioningdoc>`
-
-	fmt.Println(wapProvisionProfile)
 
 	wapProvisionProfileRaw := []byte(strings.ReplaceAll(strings.ReplaceAll(wapProvisionProfile, "\n", ""), "\t", ""))
 	// Create response payload

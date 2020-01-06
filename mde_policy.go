@@ -33,53 +33,9 @@ func PolicyHandler(w http.ResponseWriter, r *http.Request) {
 	</s:Header>
 	<s:Body xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
 	   <GetPoliciesResponse xmlns="http://schemas.microsoft.com/windows/pki/2009/01/enrollmentpolicy">
-		 <xcep:response>
-			 <policyID>d16de3a0-a087-4308-9344-e169fb528c0b</policyID>
-			 <policyFriendlyName>Mattrax Identity</policyFriendlyName>
-			 <nextUpdateHours>1</nextUpdateHours>
-			 <policiesNotChanged>false</policiesNotChanged>
-			 <policies>
-				 <policy>
-					 <policyOIDReference>0</policyOIDReference>
-					 <cAs xsi:nil="true" />
-					 <attributes>
-						 <!--<commonName>CEPUnitTest</commonName>-->
-						 <policySchema>3</policySchema>
-						 <certificateValidity>
-						 <validityPeriodSeconds>1209600</validityPeriodSeconds>
-						 <renewalPeriodSeconds>172800</renewalPeriodSeconds>
-						 </certificateValidity>
-						 <permission>
-						 <enroll>true</enroll>
-						 <autoEnroll>false</autoEnroll>
-						 </permission>
-						 <privateKeyAttributes>
-						 <minimalKeyLength>2048</minimalKeyLength>
-						 <keySpec xsi:nil="true" />
-						 <keyUsageProperty xsi:nil="true" />
-						 <permissions xsi:nil="true" />
-						 <algorithmOIDReference xsi:nil="true" />
-						 <cryptoProviders xsi:nil="true" />
-						 </privateKeyAttributes>
-						 <revision>
-						 <majorRevision>101</majorRevision>
-						 <minorRevision>0</minorRevision>
-						 </revision>
-						 <supersededPolicies xsi:nil="true" />
-						 <privateKeyFlags xsi:nil="true" />
-						 <subjectNameFlags xsi:nil="true" />
-						 <enrollmentFlags xsi:nil="true" />
-						 <generalFlags xsi:nil="true" />
-						 <hashAlgorithmOIDReference>0</hashAlgorithmOIDReference>
-						 <rARequirements xsi:nil="true" />
-						 <keyArchivalAttributes xsi:nil="true" />
-						 <extensions xsi:nil="true" />
-					 </attributes>
-				 </policy>
-			 </policies>
-		 </response>
-		 <xcep:cAs></xcep:cAs>
-		 <xcep:oIDs></xcep:oIDs>
+		 <xcep:response xsi:nil="true" />
+		 <xcep:cAs xsi:nil="true" />
+		 <xcep:oIDs xsi:nil="true" />
 	   </GetPoliciesResponse>
 	</s:Body>
  </s:Envelope>`)
