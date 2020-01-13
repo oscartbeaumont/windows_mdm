@@ -17,6 +17,7 @@ Once you have [Go Lang](https://golang.org) and Git installed use the following 
 ```bash
 git clone https://github.com/oscartbeaumont/windows_mdm.git
 cd windows_mdm/
+go run patch/patch.go # This changes the Go Lang standard library to support extra characters in certificates to remove the "asn1: syntax error: PrintableString contains invalid character" error.
 # Put your webserver's HTTPS certificate in './certs/certificate.pem' & the private key in './certs/privatekey.pem'
 # This HTTPS certificate must be valid and contain both the primary domain and the enterpriseenrollment subdomain/s (These should match the email of your users)
 # Eg. Containing the domains 'mdm.otbeaumont.me' & 'enterpriseenrollment.otbeaumont.me' results in '*@otbeaumont.me' being able to enroll. Adding an extra 'enterpriseenrollment.student.otbeaumont.me' would then allow '*@otbeaumont.me' & '*@student.otbeaumont.me' to be able to enroll.
