@@ -55,3 +55,5 @@ Start by adding a custom MDM server to AzureAD. This can be done by clicking "Mo
 ## Help
 
 If you have questions about this project or the protocol in general, feel free to contact me [here](https://otbeaumont.me/contact) but please try and work it out yourself before contacting me. This is a working project (which is way more than what I had when I started) and this protocol requires heaps of trial and error to get anywhere so get used to it.
+
+You can also hire me for consulting or developing MDM solutions (in any reasonably standard programming language), just reach out.
